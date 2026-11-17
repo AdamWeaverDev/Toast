@@ -18,16 +18,19 @@ env:
     NUGET_FEED: https://api.nuget.org/v3/index.json
     NUGET_KEY: ${{ secrets.NUGET_KEY }}
 
+permissions:
+  contents: read
+
 jobs:
   build:
     name: Build, test and pack
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v7
 
     - name: Setup .NET Core ${{ env.NETCORE_VERSION }}
-      uses: actions/setup-dotnet@v4
+      uses: actions/setup-dotnet@v6
       with:
         dotnet-version: ${{ env.NETCORE_VERSION }}
       env:
@@ -46,14 +49,18 @@ jobs:
       run: dotnet test -c Release --no-restore --verbosity normal tests/Blazored.$PROJECT_NAME.Tests
 
   deploy:
+    # Disabled until there are new package IDs and a NuGet API key (NUGET_KEY).
+    # Remove `if: false` (and restore the release condition) to re-enable.
     needs: build
-    if: github.event_name == 'release'
+    if: false # was: github.event_name == 'release'
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v7
 
       - name: Setup .NET Core
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: ${{ env.NETCORE_VERSION }}
 
@@ -80,10 +87,9 @@ jobs:
           base_href: /${{ env.PROJECT_NAME }}/
     
       - name: Deploy to Github Pages
-        uses: JamesIves/github-pages-deploy-action@releases/v3
+        uses: JamesIves/github-pages-deploy-action@v4
         with:
-          ACCESS_TOKEN: $GITHUB_TOKEN
-          BASE_BRANCH: main # The branch the action should deploy from.
-          BRANCH: gh-pages # The branch the action should deploy to.
-          FOLDER: samples/BlazorWebAssembly/bin/Release/${{ env.OUTPUT_DIR }}/publish/wwwroot # The folder the action should deploy.
-          SINGLE_COMMIT: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: gh-pages # The branch the action should deploy to.
+          folder: samples/BlazorWebAssembly/bin/Release/${{ env.OUTPUT_DIR }}/publish/wwwroot # The folder the action should deploy.
+          single-commit: true
