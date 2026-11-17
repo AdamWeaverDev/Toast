@@ -7,8 +7,10 @@ on:
     types: [ published ]
 
 env:
-    NETCORE_VERSION: '8.0.x'
-    OUTPUT_DIR: 'net8.0'
+    NETCORE_VERSION: |
+      10.0.x
+      11.0.x
+    OUTPUT_DIR: 'net10.0'
     DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
     DOTNET_CLI_TELEMETRY_OPTOUT: true
     PROJECT_NAME: Toast
@@ -25,7 +27,7 @@ jobs:
       uses: actions/checkout@v2
 
     - name: Setup .NET Core ${{ env.NETCORE_VERSION }}
-      uses: actions/setup-dotnet@v1
+      uses: actions/setup-dotnet@v4
       with:
         dotnet-version: ${{ env.NETCORE_VERSION }}
       env:
@@ -51,7 +53,7 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Setup .NET Core
-        uses: actions/setup-dotnet@v1
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.NETCORE_VERSION }}
 
