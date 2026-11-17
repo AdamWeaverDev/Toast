@@ -6,7 +6,9 @@ on:
 
 env:
     PROJECT_NAME: Blazored.Toast
-    NETCORE_VERSION: '8.0.x'
+    NETCORE_VERSION: |
+      10.0.x
+      11.0.x
 jobs:
   build:
     name: Build and test
@@ -15,7 +17,7 @@ jobs:
     - uses: actions/checkout@v2
 
     - name: Setting up .NET Core SDK ${{ env.NETCORE_VERSION }}...
-      uses: actions/setup-dotnet@v1
+      uses: actions/setup-dotnet@v4
       with:
         dotnet-version: ${{ env.NETCORE_VERSION }}
 
