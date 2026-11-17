@@ -5,7 +5,7 @@
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
 		
-		<Authors>Chris Sainty</Authors>
+		<Authors>Chris Sainty;AdamWeaverDev</Authors>
 		<Company></Company>
 		<Copyright>Copyright 2020 (c) Chris Sainty. All rights reserved.</Copyright>
 
@@ -17,10 +17,10 @@
 		<PackageId>Blazored.Toast.TestExtensions</PackageId>
 		<PackageTags>Blazored;Blazor;Razor;Components;Toast;Popup;Notification;ASP.NET Core;CSharp;Web</PackageTags>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
-		<PackageProjectUrl>https://github.com/Blazored/Toast</PackageProjectUrl>
+		<PackageProjectUrl>https://github.com/AdamWeaverDev/Toast</PackageProjectUrl>
 		<PackageIcon>icon.png</PackageIcon>
 		<RepositoryType>git</RepositoryType>
-		<RepositoryUrl>https://github.com/Blazored/Toast</RepositoryUrl>
+		<RepositoryUrl>https://github.com/AdamWeaverDev/Toast</RepositoryUrl>
 
 		<!-- SourceLink settings -->
 		<PublishRepositoryUrl>true</PublishRepositoryUrl>
@@ -39,6 +39,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="bunit" Version="1.40.0" />
+		<PackageReference Include="AngleSharp" Version="1.5.0" />
 	</ItemGroup>
 
 	<ItemGroup>

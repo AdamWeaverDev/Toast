@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Components.Routing;
 
 namespace Blazored.Toast;
 
-public partial class BlazoredToasts
+public partial class BlazoredToasts : IDisposable
 {
     [Inject] private IToastService ToastService { get; set; } = default!;
     [Inject] private NavigationManager NavigationManager { get; set; } = default!;
@@ -32,9 +32,20 @@ public partial class BlazoredToasts
 
     private List<ToastInstance> ToastList { get; set; } = new();
     private Queue<ToastInstance> ToastWaitingQueue { get; set; } = new();
+    private bool _isDisposed;
+    private bool _subscribedToNavigation;
 
     protected override void OnInitialized()
     {
+        if (IconType == IconType.Custom
+            && string.IsNullOrWhiteSpace(InfoIcon)
+            && string.IsNullOrWhiteSpace(SuccessIcon)
+            && string.IsNullOrWhiteSpace(WarningIcon)
+            && string.IsNullOrWhiteSpace(ErrorIcon))
+        {
+            throw new ArgumentException("IconType is Custom but icon parameters are not set.");
+        }
+
         ToastService.OnShow += ShowToast;
         ToastService.OnShowComponent += ShowCustomToast;
         ToastService.OnClearAll += ClearAll;
@@ -46,15 +57,7 @@ public partial class BlazoredToasts
         if (RemoveToastsOnNavigation)
         {
             NavigationManager.LocationChanged += ClearToasts;
-        }
-
-        if (IconType == IconType.Custom
-            && string.IsNullOrWhiteSpace(InfoIcon)
-            && string.IsNullOrWhiteSpace(SuccessIcon)
-            && string.IsNullOrWhiteSpace(WarningIcon)
-            && string.IsNullOrWhiteSpace(ErrorIcon))
-        {
-            throw new ArgumentException("IconType is Custom but icon parameters are not set.");
+            _subscribedToNavigation = true;
         }
     }
 
@@ -112,6 +115,11 @@ public partial class BlazoredToasts
             var settings = BuildToastSettings(level, toastSettings);
             var toast = new ToastInstance(message, level, settings);
 
+            if (_isDisposed)
+            {
+                return;
+            }
+
             if (ToastList.Count < MaxToastCount)
             {
                 ToastList.Add(toast);
@@ -129,6 +137,11 @@ public partial class BlazoredToasts
     {
         InvokeAsync(() =>
         {
+            if (_isDisposed)
+            {
+                return;
+            }
+
             var childContent = new RenderFragment(builder =>
             {
                 var i = 0;
@@ -153,22 +166,33 @@ public partial class BlazoredToasts
         });
     }
 
-    private void ShowEnqueuedToast()
+    // Must be called on the renderer's synchronization context. Moves queued toasts into the
+    // visible list until MaxToastCount is reached or the queue is empty.
+    private void ShowEnqueuedToasts()
     {
-        InvokeAsync(() =>
+        var promoted = false;
+
+        while (ToastList.Count < MaxToastCount && ToastWaitingQueue.TryDequeue(out var toast))
         {
-            var toast = ToastWaitingQueue.Dequeue();
-
             ToastList.Add(toast);
+            promoted = true;
+        }
 
+        if (promoted)
+        {
             StateHasChanged();
-        });
+        }
     }
 
     public void RemoveToast(Guid toastId)
     {
         InvokeAsync(() =>
         {
+            if (_isDisposed)
+            {
+                return;
+            }
+
             var toastInstance = ToastList.SingleOrDefault(x => x.Id == toastId);
 
             if (toastInstance is not null)
@@ -177,10 +201,7 @@ public partial class BlazoredToasts
                 StateHasChanged();
             }
 
-            if (ToastWaitingQueue.Any())
-            {
-                ShowEnqueuedToast();
-            }
+            ShowEnqueuedToasts();
         });
     }
 
@@ -188,13 +209,15 @@ public partial class BlazoredToasts
     {
         InvokeAsync(() =>
         {
+            if (_isDisposed)
+            {
+                return;
+            }
+
             ToastList.Clear();
             StateHasChanged();
 
-            if (ToastWaitingQueue.Any())
-            {
-                ShowEnqueuedToast();
-            }
+            ShowEnqueuedToasts();
         });
     }
 
@@ -202,6 +225,11 @@ public partial class BlazoredToasts
     {
         InvokeAsync(() =>
         {
+            if (_isDisposed)
+            {
+                return;
+            }
+
             ToastList.Clear();
             StateHasChanged();
         });
@@ -211,8 +239,15 @@ public partial class BlazoredToasts
     {
         InvokeAsync(() =>
         {
+            if (_isDisposed)
+            {
+                return;
+            }
+
             ToastList.RemoveAll(x => x.CustomComponent is null && x.Level == toastLevel);
             StateHasChanged();
+
+            ShowEnqueuedToasts();
         });
     }
 
@@ -220,8 +255,15 @@ public partial class BlazoredToasts
     {
         InvokeAsync(() =>
         {
+            if (_isDisposed)
+            {
+                return;
+            }
+
             ToastList.RemoveAll(x => x.CustomComponent is not null);
             StateHasChanged();
+
+            ShowEnqueuedToasts();
         });
     }
 
@@ -241,5 +283,24 @@ public partial class BlazoredToasts
             ToastWaitingQueue = new(ToastWaitingQueue.Where(x => x.Level != toastLevel));
             StateHasChanged();
         });
+    }
+
+    public void Dispose()
+    {
+        _isDisposed = true;
+
+        ToastService.OnShow -= ShowToast;
+        ToastService.OnShowComponent -= ShowCustomToast;
+        ToastService.OnClearAll -= ClearAll;
+        ToastService.OnClearToasts -= ClearToasts;
+        ToastService.OnClearCustomToasts -= ClearCustomToasts;
+        ToastService.OnClearQueue -= ClearQueue;
+        ToastService.OnClearQueueToasts -= ClearQueueToasts;
+
+        if (_subscribedToNavigation)
+        {
+            NavigationManager.LocationChanged -= ClearToasts;
+            _subscribedToNavigation = false;
+        }
     }
 }

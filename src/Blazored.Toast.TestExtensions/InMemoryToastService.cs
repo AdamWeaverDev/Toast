@@ -17,17 +17,29 @@ public class InMemoryToastService : IToastService
     public event Action? OnClearQueue;
     public event Action<ToastLevel>? OnClearQueueToasts;
 
-    public void ShowToast<TComponent>() where TComponent : IComponent 
-        => _toasts.Add(new InMemoryToast(typeof(TComponent)));
+    public void ShowToast<TComponent>() where TComponent : IComponent
+    {
+        _toasts.Add(new InMemoryToast(typeof(TComponent)));
+        OnShowComponent?.Invoke(typeof(TComponent), new ToastParameters(), null);
+    }
 
-    public void ShowToast<TComponent>(ToastParameters parameters) where TComponent : IComponent 
-        => _toasts.Add(new InMemoryToast(typeof(TComponent), parameters));
+    public void ShowToast<TComponent>(ToastParameters parameters) where TComponent : IComponent
+    {
+        _toasts.Add(new InMemoryToast(typeof(TComponent), parameters));
+        OnShowComponent?.Invoke(typeof(TComponent), parameters, null);
+    }
 
-    public void ShowToast<TComponent>(Action<ToastSettings>? settings) where TComponent : IComponent 
-        => _toasts.Add(new InMemoryToast(typeof(TComponent)));
+    public void ShowToast<TComponent>(Action<ToastSettings>? settings) where TComponent : IComponent
+    {
+        _toasts.Add(new InMemoryToast(typeof(TComponent)));
+        OnShowComponent?.Invoke(typeof(TComponent), null, settings);
+    }
 
-    public void ShowToast<TComponent>(ToastParameters parameters, Action<ToastSettings>? settings) where TComponent : IComponent 
-        => _toasts.Add(new InMemoryToast(typeof(TComponent), parameters));
+    public void ShowToast<TComponent>(ToastParameters parameters, Action<ToastSettings>? settings) where TComponent : IComponent
+    {
+        _toasts.Add(new InMemoryToast(typeof(TComponent), parameters));
+        OnShowComponent?.Invoke(typeof(TComponent), parameters, settings);
+    }
 
     public void ShowError(string message, Action<ToastSettings>? settings = null)
         => ShowToast(ToastLevel.Error, message, settings);
@@ -51,7 +63,10 @@ public class InMemoryToastService : IToastService
         => ShowToast(level, builder => builder.AddContent(0, message), settings);
 
     public void ShowToast(ToastLevel level, RenderFragment message, Action<ToastSettings>? settings = null)
-        => _toasts.Add(new InMemoryToast(typeof(ToastInstance), level, message));
+    {
+        _toasts.Add(new InMemoryToast(typeof(ToastInstance), level, message));
+        OnShow?.Invoke(level, message, settings);
+    }
 
     public void ShowWarning(string message, Action<ToastSettings>? settings = null)
         => ShowToast(ToastLevel.Warning, message, settings);
@@ -60,41 +75,52 @@ public class InMemoryToastService : IToastService
         => ShowToast(ToastLevel.Warning, message,  settings);
 
     public void ClearAll()
-           => _toasts.Clear();
+    {
+        _toasts.Clear();
+        OnClearAll?.Invoke();
+    }
 
     public void ClearToasts(ToastLevel toastLevel)
-            => _toasts.RemoveAll(x => x.ToastType == typeof(ToastInstance) && x.ToastLevel == toastLevel);
+    {
+        _toasts.RemoveAll(x => x.ToastType == typeof(ToastInstance) && x.ToastLevel == toastLevel);
+        OnClearToasts?.Invoke(toastLevel);
+    }
 
     public void ClearWarningToasts()
-            => _toasts.RemoveAll(x => x.ToastType == typeof(ToastInstance) && x.ToastLevel == ToastLevel.Warning);
+        => ClearToasts(ToastLevel.Warning);
 
     public void ClearInfoToasts()
-            => _toasts.RemoveAll(x => x.ToastType == typeof(ToastInstance) && x.ToastLevel == ToastLevel.Info);
+        => ClearToasts(ToastLevel.Info);
 
     public void ClearSuccessToasts()
-            => _toasts.RemoveAll(x => x.ToastType == typeof(ToastInstance) && x.ToastLevel == ToastLevel.Success);
+        => ClearToasts(ToastLevel.Success);
 
     public void ClearErrorToasts()
-            => _toasts.RemoveAll(x => x.ToastType == typeof(ToastInstance) && x.ToastLevel == ToastLevel.Error);
+        => ClearToasts(ToastLevel.Error);
 
     public void ClearCustomToasts()
-            => _toasts.RemoveAll(x => x.ToastType != typeof(ToastInstance));
+    {
+        _toasts.RemoveAll(x => x.ToastType != typeof(ToastInstance));
+        OnClearCustomToasts?.Invoke();
+    }
 
+    // The fake has no waiting queue (every toast is recorded immediately), so there is
+    // nothing to remove; subscribers are still notified, as with the real ToastService.
     public void ClearQueue()
-            => throw new NotImplementedException();
+        => OnClearQueue?.Invoke();
 
     public void ClearQueueToasts(ToastLevel toastLevel)
-            => throw new NotImplementedException();
+        => OnClearQueueToasts?.Invoke(toastLevel);
 
     public void ClearQueueWarningToasts()
-            => throw new NotImplementedException();
+        => ClearQueueToasts(ToastLevel.Warning);
 
     public void ClearQueueInfoToasts()
-            => throw new NotImplementedException();
+        => ClearQueueToasts(ToastLevel.Info);
 
     public void ClearQueueSuccessToasts()
-            => throw new NotImplementedException();
+        => ClearQueueToasts(ToastLevel.Success);
 
     public void ClearQueueErrorToasts()
-            => throw new NotImplementedException();
+        => ClearQueueToasts(ToastLevel.Error);
 }
